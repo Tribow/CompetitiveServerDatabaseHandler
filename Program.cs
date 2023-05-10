@@ -34,7 +34,6 @@ namespace CompetitiveRatingsUpdater
                 InsertPlayers();
 
                 Console.ReadLine();
-                
             }
             else
             {
@@ -56,7 +55,6 @@ namespace CompetitiveRatingsUpdater
                 StartWatchingFile();
 
                 Console.ReadLine();
-                
             }
         }
 
