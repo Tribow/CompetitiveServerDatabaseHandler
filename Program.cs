@@ -1,4 +1,6 @@
-﻿using MongoDB.Driver;
+﻿using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Primitives;
+using MongoDB.Driver;
 using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
@@ -11,29 +13,41 @@ namespace CompetitiveRatingsUpdater
     class Program
     {
         private static MongoClientSettings settings = new MongoClientSettings();
-        private const string MongoConnectionString = "Mongo Server Link";
-        private const string DatabaseName = "The Database Name";
-        private const string CollectionName = "The Collection Name";
+        private const string MongoConnectionString = "The String";
+        private const string DatabaseName = "DatabaseName";
+        private const string CollectionName = "CollectionName";
         private const string XmlFileName = "RankData.xml";
         private static XmlDocument XmlFile = new XmlDocument();
         private static MongoClient client = new MongoClient();
         private static IMongoDatabase database;
         private static IMongoCollection<BsonDocument> _playerCollection;
+        private static PhysicalFileProvider provider;
+        private static IChangeToken changeToken;
 
         static void Main(string[] args)
         {
+            provider = new PhysicalFileProvider(AppDomain.CurrentDomain.BaseDirectory)
+            {
+                UsePollingFileWatcher = true,
+                UseActivePolling = true
+            };
 
             //Connect with mongo
             MongoSetup();
 
             if (File.Exists(Directory.GetCurrentDirectory() + $@"/{XmlFileName}"))
             {
-                StartWatchingFile();
-
                 //Attempt to add new players into the thing or update information as needed
                 InsertPlayers();
 
-                Console.ReadLine();
+                //Watch that file!!!! Watch it!!!
+                StartWatchingFile();
+
+                while (true)
+                {
+                    System.Threading.Thread.Sleep(100);
+                }
+                
             }
             else
             {
@@ -52,9 +66,13 @@ namespace CompetitiveRatingsUpdater
                 ExtractPlayers();
                 Console.WriteLine();
 
+                //WATCH FILE NOW!!! NOW!!!!!!!!!
                 StartWatchingFile();
 
-                Console.ReadLine();
+                while (true)
+                {
+                    System.Threading.Thread.Sleep(100);
+                }
             }
         }
 
@@ -159,6 +177,7 @@ namespace CompetitiveRatingsUpdater
                     rankDeviation.InnerText = bson.GetValue("rankDeviation").ToString();
                     playerNode.AppendChild(volatility);
                     volatility.InnerText = bson.GetValue("volatility").ToString();
+                    XmlFile.Save(Directory.GetCurrentDirectory() + $@"/{XmlFileName}");
                     ClearConsoleLine();
                     Console.Write($"Player {bson.GetValue("name")} loaded... ");
                 }
@@ -174,8 +193,7 @@ namespace CompetitiveRatingsUpdater
 
         private static void StartWatchingFile()
         {
-            //Watch that file!!!! Watch it!!!
-            FileSystemWatcher watcher = new FileSystemWatcher(AppDomain.CurrentDomain.BaseDirectory);
+            /*FileSystemWatcher watcher = new FileSystemWatcher(AppDomain.CurrentDomain.BaseDirectory);
             watcher.NotifyFilter = NotifyFilters.LastWrite
                                 | NotifyFilters.LastAccess
                                 | NotifyFilters.FileName;
@@ -183,11 +201,32 @@ namespace CompetitiveRatingsUpdater
             watcher.Changed += OnChanged;
             watcher.Error += OnError;
 
-            watcher.EnableRaisingEvents = true;
+            watcher.EnableRaisingEvents = true;*/
+
+            changeToken = provider.Watch(XmlFileName);
+            changeToken.RegisterChangeCallback(Notify, default);
+            Console.WriteLine("Watching XML...");
+
         }
 
-        private static void OnChanged(object sender, FileSystemEventArgs e)
+        private static void Notify(object state)
         {
+            if(changeToken.HasChanged)
+            {
+                Console.WriteLine();
+                Console.WriteLine("File changed!");
+                //If the file changed it must have something different in it! Run the function!
+                InsertPlayers();
+            }
+            StartWatchingFile();
+            Console.WriteLine("Will now continue watching XML file");
+        }
+
+
+
+        /*private static void OnChanged(object sender, FileSystemEventArgs e)
+        {
+        // DIS ONLY WORKS ON WINDOWS LMAOO!!!
             if (e.ChangeType != WatcherChangeTypes.Changed)
             {
                 return;
@@ -196,7 +235,7 @@ namespace CompetitiveRatingsUpdater
             Console.WriteLine("File changed!");
             //If the file changed it must have something different in it! Run the function!
             InsertPlayers();
-        }
+        }*/
 
         private static void OnError(object sender, ErrorEventArgs e)
         {
@@ -237,9 +276,9 @@ namespace CompetitiveRatingsUpdater
 
                 XmlDocument XmlDoc = new XmlDocument();
                 XmlDoc.LoadXml(body);
-                Console.WriteLine("XML read! Attempting to load players...");
-
                 XmlNodeList nodes = XmlDoc.SelectNodes("//Player");
+
+                Console.WriteLine("XML read! Attempting to load players...");
                 foreach (XmlNode node in nodes)
                 {
                     if (node.Attributes.Count > 1)
