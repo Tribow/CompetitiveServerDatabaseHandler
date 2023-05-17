@@ -13,9 +13,9 @@ namespace CompetitiveRatingsUpdater
     class Program
     {
         private static MongoClientSettings settings = new MongoClientSettings();
-        private const string MongoConnectionString = "The String";
-        private const string DatabaseName = "DatabaseName";
-        private const string CollectionName = "CollectionName";
+        private const string MongoConnectionString = "lmao";
+        private const string DatabaseName = "Funny database";
+        private const string CollectionName = "I'm collecting so hard";
         private const string XmlFileName = "RankData.xml";
         private static XmlDocument XmlFile = new XmlDocument();
         private static MongoClient client = new MongoClient();
@@ -37,6 +37,9 @@ namespace CompetitiveRatingsUpdater
 
             if (File.Exists(Directory.GetCurrentDirectory() + $@"/{XmlFileName}"))
             {
+                //Load the thing dumbass!!!!
+                XmlFile.Load(Directory.GetCurrentDirectory() + $@"/{XmlFileName}");
+
                 //Attempt to add new players into the thing or update information as needed
                 InsertPlayers();
 
@@ -90,15 +93,18 @@ namespace CompetitiveRatingsUpdater
         {
             Console.WriteLine("Generating Player Data....");
             List<PlayerObject> playerDocuments = GenerateDocuments();
-            List<BsonDocument> bsonDocuments = new List<BsonDocument>();
             Console.WriteLine();
 
 
             if (playerDocuments.Count == 0)
             {
                 Console.WriteLine("There's no player data in here lmao");
+                //This should only occur when the RankData.xml is created by the Server rather than the database handler
+                ExtractPlayers();
                 return;
             }
+
+            List<BsonDocument> bsonDocuments = new List<BsonDocument>();
 
             Console.WriteLine("Comparing Player Data with Mongo Database");
             foreach (PlayerObject player in playerDocuments)
@@ -159,6 +165,7 @@ namespace CompetitiveRatingsUpdater
             {
                 foreach (BsonDocument bson in bsonDocuments)
                 {
+
                     XmlNode root = XmlFile.SelectSingleNode("RankData");
                     XmlNode playerNode = XmlFile.CreateElement("Player");
                     XmlAttribute name = XmlFile.CreateAttribute("name");
@@ -205,7 +212,6 @@ namespace CompetitiveRatingsUpdater
 
             changeToken = provider.Watch(XmlFileName);
             changeToken.RegisterChangeCallback(Notify, default);
-            Console.WriteLine("Watching XML...");
 
         }
 
@@ -219,14 +225,13 @@ namespace CompetitiveRatingsUpdater
                 InsertPlayers();
             }
             StartWatchingFile();
-            Console.WriteLine("Will now continue watching XML file");
         }
 
 
-
+        // DIS ONLY WORKS ON WINDOWS LMAOO!!!
         /*private static void OnChanged(object sender, FileSystemEventArgs e)
         {
-        // DIS ONLY WORKS ON WINDOWS LMAOO!!!
+        
             if (e.ChangeType != WatcherChangeTypes.Changed)
             {
                 return;
@@ -235,7 +240,7 @@ namespace CompetitiveRatingsUpdater
             Console.WriteLine("File changed!");
             //If the file changed it must have something different in it! Run the function!
             InsertPlayers();
-        }*/
+        }
 
         private static void OnError(object sender, ErrorEventArgs e)
         {
@@ -252,7 +257,7 @@ namespace CompetitiveRatingsUpdater
                 Console.WriteLine();
                 PrintException(ex.InnerException);
             }
-        }
+        }*/
 
         private static void ClearConsoleLine()
         {
