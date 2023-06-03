@@ -13,9 +13,9 @@ namespace CompetitiveRatingsUpdater
     class Program
     {
         private static MongoClientSettings settings = new MongoClientSettings();
-        private const string MongoConnectionString = "lmao";
-        private const string DatabaseName = "Funny database";
-        private const string CollectionName = "I'm collecting so hard";
+        private const string MongoConnectionString = "databasestringconnect";
+        private const string DatabaseName = "haha";
+        private const string CollectionName = "xd";
         private const string XmlFileName = "RankData.xml";
         private static XmlDocument XmlFile = new XmlDocument();
         private static MongoClient client = new MongoClient();
@@ -39,6 +39,9 @@ namespace CompetitiveRatingsUpdater
             {
                 //Load the thing dumbass!!!!
                 XmlFile.Load(Directory.GetCurrentDirectory() + $@"/{XmlFileName}");
+
+                //Make sure the XML is synced with the database!
+                SyncXMLToDatabase();
 
                 //Attempt to add new players into the thing or update information as needed
                 InsertPlayers();
@@ -195,6 +198,71 @@ namespace CompetitiveRatingsUpdater
             {
                 Console.WriteLine("Oh there's nothing in the database.");
                 Console.WriteLine("lmao");
+            }
+        }
+
+        private static void SyncXMLToDatabase()
+        {
+            Console.WriteLine("Syncing player data...");
+            List<BsonDocument> bsonDocuments = _playerCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
+
+            if(bsonDocuments.Count > 0)
+            {
+                foreach(BsonDocument bson in bsonDocuments)
+                {
+                    XmlNode nodeToCheck = XmlFile.SelectSingleNode("RankData/Player[@name='" + bson.GetValue("name") + "'][@id='" + bson.GetValue("id") + "']/Rank");
+
+                    if(nodeToCheck != null)
+                    {
+                        if (nodeToCheck.InnerText != bson.GetValue("rank").ToString())
+                        {
+                            nodeToCheck.InnerText = bson.GetValue("rank").ToString();
+                            nodeToCheck = XmlFile.SelectSingleNode("RankData/Player[@name='" + bson.GetValue("name") + "'][@id='" + bson.GetValue("id") + "']/RankDeviation");
+                            nodeToCheck.InnerText = bson.GetValue("rankDeviation").ToString();
+                            nodeToCheck = XmlFile.SelectSingleNode("RankData/Player[@name='" + bson.GetValue("name") + "'][@id='" + bson.GetValue("id") + "']/Volatility");
+                            nodeToCheck.InnerText = bson.GetValue("volatility").ToString();
+                            XmlFile.Save(Directory.GetCurrentDirectory() + $@"/{XmlFileName}");
+                            ClearConsoleLine();
+                            Console.WriteLine($"Player {bson.GetValue("name")} synced...");
+                        }
+                        else
+                        {
+                            ClearConsoleLine();
+                            Console.Write($"Player {bson.GetValue("name")} verified...");
+                        }
+                    }
+                    else
+                    {
+                        XmlNode root = XmlFile.SelectSingleNode("RankData");
+                        XmlNode playerNode = XmlFile.CreateElement("Player");
+                        XmlAttribute name = XmlFile.CreateAttribute("name");
+                        name.Value = bson.GetValue("name").ToString();
+                        XmlAttribute id = XmlFile.CreateAttribute("id");
+                        id.Value = bson.GetValue("id").ToString();
+                        XmlElement rank = XmlFile.CreateElement("Rank");
+                        XmlElement rankDeviation = XmlFile.CreateElement("RankDeviation");
+                        XmlElement volatility = XmlFile.CreateElement("Volatility");
+                        root.AppendChild(playerNode);
+                        playerNode.Attributes.Append(name);
+                        playerNode.Attributes.Append(id);
+                        playerNode.AppendChild(rank);
+                        rank.InnerText = bson.GetValue("rank").ToString();
+                        playerNode.AppendChild(rankDeviation);
+                        rankDeviation.InnerText = bson.GetValue("rankDeviation").ToString();
+                        playerNode.AppendChild(volatility);
+                        volatility.InnerText = bson.GetValue("volatility").ToString();
+                        XmlFile.Save(Directory.GetCurrentDirectory() + $@"/{XmlFileName}");
+                        ClearConsoleLine();
+                        Console.WriteLine($"Player {bson.GetValue("name")} added to XML...");
+                    }
+                }
+                ClearConsoleLine();
+                Console.WriteLine("Database synced!");
+            }
+            else
+            {
+                Console.WriteLine("There's nothing to sync!");
+                Console.WriteLine("How????");
             }
         }
 
